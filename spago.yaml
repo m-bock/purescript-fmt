@@ -1,0 +1,18 @@
+package:
+  dependencies:
+    - console
+    - effect
+    - foreign-object
+    - prelude
+    - record
+    - strings
+    - typelevel-lists
+    - typelevel-prelude
+  name: fmt
+  test:
+    dependencies: []
+    main: Test.Main
+workspace:
+  extra_packages: {}
+  package_set:
+    registry: 40.6.0
