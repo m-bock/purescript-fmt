@@ -3,9 +3,8 @@ module Use where
 import Prelude
 
 import Data.String as Str
-import Fmt (fmt, fmtWith)
+import Fmt (fmt, fmtWith, type (#))
 import Fmt as Fmt
-
 
 greeting :: String
 greeting =
@@ -15,21 +14,36 @@ greeting =
     """
     { name: "Tom", city: "London" }
 
+type Cfg2 =
+  Fmt.DefaultConfig
+    # Fmt.SetOpenClose "<" ">"
+
 greeting2 :: String
 greeting2 =
   fmtWith
-    @( Fmt.MkConfig
-        (Fmt.MkOpen "<")
-        (Fmt.MkClose ">")
-        (Fmt.MkToString UseMyToString)
-    )
+    @Cfg2
     @"""
       Hello, my name is <name>. I live in <city>.
-      My hobbies are: <hobbies>
     """
     { name: "Tom"
     , city: "London"
-    , hobbies: ["football", "basketball", "swimming"]
+    }
+
+type Cfg3 =
+  Fmt.DefaultConfig
+    # Fmt.SetToString UseMyToString
+
+greeting3 :: String
+greeting3 =
+  fmtWith
+    @Cfg3
+    @"""
+      Hello, my name is {name}. I live in {city}.
+      My hobbies are: {hobbies}
+    """
+    { name: "Tom"
+    , city: "London"
+    , hobbies: [ "football", "basketball", "swimming" ]
     }
 
 data UseMyToString

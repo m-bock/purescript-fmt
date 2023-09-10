@@ -1,26 +1,28 @@
 module Fmt
   ( Config
-  , ConfigOpen
-  , MkConfig
   , ConfigClose
+  , ConfigOpen
   , ConfigToString
-  , MkOpen
-  , MkClose
-  , MkToString
+  , DefaultClose
+  , DefaultConfig
+  , DefaultOpen
   , DefaultToString
+  , DefaultUseToString
+  , MkClose
+  , MkConfig
+  , MkOpen
+  , MkToString
+  , SetOpenClose
+  , SetToString
+  , class EvalConfigSpec
   , class Format
-  , format
   , class IsAlpha
   , class ParseId
   , class ParseNamed
   , class ReplaceMap
-  , replaceMap
   , class ReplaceMapRL
-  , replaceMapRL
   , class ToString
-  , toString
   , class ToStringBy
-  , toStringBy
   , class ValidateConfig
   , class ValidateConfigClose
   , class ValidateConfigClose'
@@ -28,7 +30,14 @@ module Fmt
   , class ValidateConfigOpen'
   , fmt
   , fmtWith
-  ) where
+  , format
+  , replaceMap
+  , replaceMapRL
+  , toString
+  , toStringBy
+  , module Export
+  )
+  where
 
 import Prelude
 
@@ -48,6 +57,7 @@ import Record as Record
 import Type.Data.Boolean (class If)
 import Type.Equality (class TypeEquals)
 import Type.Proxy (Proxy(..))
+import Type.Function (type (#)) as Export
 
 --------------------------------------------------------------------------------
 --- fmt
@@ -81,12 +91,44 @@ foreign import data ConfigToString :: Type
 foreign import data MkToString :: Type -> ConfigToString
 
 foreign import data Config :: Type
-foreign import data MkConfig :: ConfigOpen -> ConfigClose -> ConfigToString -> Config
+foreign import data MkConfig
+  :: ConfigOpen
+  -> ConfigClose
+  -> ConfigToString
+  -> Config
 
 type DefaultConfig = MkConfig
   (MkOpen "{")
   (MkClose "}")
-  (MkToString DefaultToString)
+  (MkToString DefaultUseToString)
+
+type DefaultOpen = MkOpen "{"
+
+type DefaultClose = MkClose "}"
+
+type DefaultToString = MkToString DefaultUseToString
+
+--------------------------------------------------------------------------------
+
+
+foreign import data SetOpenClose :: Symbol -> Symbol -> Config -> Config
+
+foreign import data SetToString :: Type -> Config -> Config
+
+class EvalConfigSpec (spec :: Config) (config :: Config) | spec -> config
+
+instance
+  ( EvalConfigSpec tail (MkConfig configOpen configClose configToString)
+  ) =>
+  EvalConfigSpec (SetOpenClose open close tail) (MkConfig (MkOpen open) (MkClose close) configToString)
+
+instance
+  ( EvalConfigSpec tail (MkConfig configOpen configClose configToString)
+  ) =>
+  EvalConfigSpec (SetToString toString tail) (MkConfig configOpen configClose (MkToString toString))
+
+instance EvalConfigSpec (MkConfig configOpen configClose configToString) (MkConfig configOpen configClose configToString)
+
 
 --------------------------------------------------------------------------------
 --- ValidateConfig
@@ -172,8 +214,9 @@ instance
   , ReplaceMap config row
   , IsSymbol open
   , IsSymbol close
+  , EvalConfigSpec config' config
   ) =>
-  Format config sym (Record row)
+  Format config' sym (Record row)
   where
   format _ _ record =
     let
@@ -202,9 +245,9 @@ replaceNamed { open, close } (key /\ value) = Str.replaceAll
 class ToStringBy (tok :: Type) (a :: Type) where
   toStringBy :: Proxy tok -> a -> String
 
-data DefaultToString
+data DefaultUseToString
 
-instance (ToString a) => ToStringBy DefaultToString a where
+instance (ToString a) => ToStringBy DefaultUseToString a where
   toStringBy _ = toString
 
 class ToString (a :: Type) where
