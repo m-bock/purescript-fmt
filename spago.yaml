@@ -1,8 +1,12 @@
 package:
   dependencies:
+    - arrays
+    - foldable-traversable
     - prelude
     - record
     - strings
+    - tuples
+    - type-equality
     - typelevel-prelude
   name: fmt
   test:
