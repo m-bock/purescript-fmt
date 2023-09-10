@@ -14,6 +14,12 @@ package:
       - console
       - effect
     main: Test.Main
+  publish:
+    version: 0.0.1
+    license: BSD-3-Clause
+    location:
+      githubOwner: thought2
+      githubRepo: purescript-fmt
 workspace:
   extra_packages: {}
   package_set:
