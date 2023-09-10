@@ -22,19 +22,18 @@ import Type.Proxy (Proxy(..))
 
 greeting :: String
 greeting =
-  fmt
+  fmt 
     @"""
-      Hello, my name is {name}. I live in {city}.   
-      Hello, my name is {name}. I live in {city}.    
-      Hello, my name is {name}. I live in {city}.    
-      Hello, my name is {name}. I live in {city}.    
-      Hello, my name is {name}. I live in {city}.    
-      Hello, my name is {name}. I live in {city}.    
-      Hello, my name is {name}. I live in {city}.    
-      Hello, my name is {name}. I live in {city}.    
-      Hello, my name is {name}. I live in {city}.    
-      Hello, my name is {name}. I live in {city}.    
-
+      Hello, my name is {name}. I live in {city}.
+      Hello, my name is {name}. I live in {city}.
+      Hello, my name is {name}. I live in {city}.
+      Hello, my name is {name}. I live in {city}.
+      Hello, my name is {name}. I live in {city}.
+      Hello, my name is {name}. I live in {city}.
+      Hello, my name is {name}. I live in {city}.
+      Hello, my name is {name}. I live in {city}.
+      Hello, my name is {name}. I live in {city}.
+      Hello, my name is {name}. I live in {city}.
     """
     { name: "Tom", city: "London" }
 
@@ -241,23 +240,30 @@ class
   | config openHead openTail head tail -> replace
 
 instance
-  ( ParseId config head tail sym replace ""
-  ,  Sym.Cons head tail sym
-  ) =>
-  ParseOpen config openHead "" head tail replace
-
--- TODO
-else instance
-  (
-    -- ( Sym.Cons head tailSym sym
-    -- , Sym.Cons head tailTokens tokens
-
-    -- , ParseOpen config tailSym tailTokens replace
-  
-  ParseNamed config head' tail' replace
+  ( ParseId config head' tail' tail replace ""
   , Sym.Cons head' tail' tail
   ) =>
-  ParseOpen config openHead openTail "{" tail replace
+  ParseOpen config openHead "" openHead tail replace
+
+else instance
+  ( Sym.Cons openHead' openTail' openTail
+  , Sym.Cons head' tail' tail
+  
+  , ParseOpen config openHead' openTail' head' tail' replace
+
+  ) =>
+  ParseOpen config openHead openTail openHead tail replace
+
+else  instance
+  ( ParseNamed config head' tail' replace
+  , Sym.Cons head' tail' tail
+
+  ) => 
+  ParseOpen config openHead openTail head tail replace
+
+  -- ParseNamed config head' tail' replace
+  -- , Sym.Cons head' tail' tail
+  
 
 --------------------------------------------------------------------------------
 --- ParseId
@@ -277,7 +283,7 @@ instance ParseId config head "" backtrack replace id
 
 else instance
   ( ParseNamed config head' tail' replace
-   , Sym.Cons head' tail' tail
+  , Sym.Cons head' tail' tail
   , Row.Cons id typ replace replace'
   , Row.Nub replace' replace''
   --, TypeEquals config (MkConfig (MkConfigOpen open) (MkConfigClose close) configToString)
@@ -286,7 +292,7 @@ else instance
 
 else instance
   ( Sym.Cons head' tail' tail
-    
+
   , IsAlpha head headIsAlpha
   , If headIsAlpha head' "" a_head
   , If headIsAlpha tail' "" a_tail
