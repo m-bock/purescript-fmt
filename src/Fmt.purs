@@ -22,7 +22,7 @@ import Type.Proxy (Proxy(..))
 
 greeting :: String
 greeting =
-  fmt 
+  fmt
     @"""
       Hello, my name is {name}. I live in {city}.
       Hello, my name is {name}. I live in {city}.
@@ -211,59 +211,20 @@ class
     (replace :: Row Type)
   | config head tail -> replace
 
-instance ParseNamed config head "" ()
+instance parseNamed_nil :: ParseNamed config head "" ()
 
-else instance
-  ( TypeEquals config
-      ( MkConfig
-          (MkConfigOpen open)
-          (MkConfigClose close)
-          configToString
-      )
-  , Sym.Cons openHead openTail open
-  , ParseOpen config openHead openTail head tail replace
+else instance parseNamed_open ::
+  ( ParseId config head' tail' tail' replace ""
+  , Sym.Cons head' tail' tail
+  , TypeEquals config (MkConfig (MkConfigOpen open) configClose configToString)
+  ) =>
+  ParseNamed (MkConfig (MkConfigOpen open) configClose configToString) open tail replace
+
+else instance parseNamed_other ::
+  ( Sym.Cons head' tail' tail
+  , ParseNamed config head' tail' replace
   ) =>
   ParseNamed config head tail replace
-
---------------------------------------------------------------------------------
---- ParseSym
---------------------------------------------------------------------------------
-
-class
-  ParseOpen
-    (config :: Config)
-    (openHead :: Symbol)
-    (openTail :: Symbol)
-    (head :: Symbol)
-    (tail :: Symbol)
-    (replace :: Row Type)
-  | config openHead openTail head tail -> replace
-
-instance
-  ( ParseId config head' tail' tail replace ""
-  , Sym.Cons head' tail' tail
-  ) =>
-  ParseOpen config openHead "" openHead tail replace
-
-else instance
-  ( Sym.Cons openHead' openTail' openTail
-  , Sym.Cons head' tail' tail
-  
-  , ParseOpen config openHead' openTail' head' tail' replace
-
-  ) =>
-  ParseOpen config openHead openTail openHead tail replace
-
-else  instance
-  ( ParseNamed config head' tail' replace
-  , Sym.Cons head' tail' tail
-
-  ) => 
-  ParseOpen config openHead openTail head tail replace
-
-  -- ParseNamed config head' tail' replace
-  -- , Sym.Cons head' tail' tail
-  
 
 --------------------------------------------------------------------------------
 --- ParseId
@@ -286,9 +247,14 @@ else instance
   , Sym.Cons head' tail' tail
   , Row.Cons id typ replace replace'
   , Row.Nub replace' replace''
-  --, TypeEquals config (MkConfig (MkConfigOpen open) (MkConfigClose close) configToString)
+  , TypeEquals config
+      ( MkConfig
+          configOpen
+          (MkConfigClose close)
+          configToString
+      )
   ) =>
-  ParseId {-(MkConfig (MkConfigOpen open) (MkConfigClose close) configToString)-} config "}" tail backtrack replace'' id
+  ParseId (MkConfig configOpen (MkConfigClose close) configToString) close tail backtrack replace'' id
 
 else instance
   ( Sym.Cons head' tail' tail
