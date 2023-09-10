@@ -15,7 +15,7 @@ package:
       - effect
     main: Test.Main
   publish:
-    version: 0.0.1
+    version: 0.1.0
     license: BSD-3-Clause
     location:
       githubOwner: thought2
