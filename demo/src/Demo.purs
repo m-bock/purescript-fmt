@@ -27,4 +27,10 @@ greeting =
 
 {-
 You can [check out more examples here](./Samples.md).
+
+## Features
+
+- Compile-time format string validation
+- Easily extensible with custom formatter type class
+- Configurable placeholder syntax
 -}
