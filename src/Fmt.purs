@@ -6,7 +6,7 @@ module Fmt
   , SetOpenClose
   , SetToString
   , class Format
-  , class IsAlpha
+  , class IsValidChar
   , class ParseId
   , class ParseNamed
   , class ReplaceMap
@@ -321,19 +321,19 @@ else instance parseId_startTypeId ::
 else instance parseId_continueOrFail ::
   ( Sym.Cons head' tail' tail
 
-  , IsAlpha head headIsAlpha
-  , If headIsAlpha head' "" a_head
-  , If headIsAlpha tail' "" a_tail
+  , IsValidChar head headIsValidChar
+  , If headIsValidChar head' "" a_head
+  , If headIsValidChar tail' "" a_tail
 
   , Sym.Append id head id'
   , ParseId config a_head a_tail backtrack a_replace id'
 
   , Sym.Cons backtrackHead' backtrackTail' backtrack
-  , If headIsAlpha "" backtrackHead' b_head
-  , If headIsAlpha "" backtrackTail' b_tail
+  , If headIsValidChar "" backtrackHead' b_head
+  , If headIsValidChar "" backtrackTail' b_tail
   , ParseNamed config b_head b_tail b_replace
 
-  , If headIsAlpha a_replace b_replace replace
+  , If headIsValidChar a_replace b_replace replace
   ) =>
   ParseId config head tail backtrack replace id
 
@@ -366,55 +366,93 @@ else instance parseTypeId_finish ::
 else instance parseTypeId_continueOrFail ::
   ( Sym.Cons head' tail' tail
 
-  , IsAlpha head headIsAlpha
-  , If headIsAlpha head' "" a_head
-  , If headIsAlpha tail' "" a_tail
+  , IsValidChar head headIsValidChar
+  , If headIsValidChar head' "" a_head
+  , If headIsValidChar tail' "" a_tail
 
   , Sym.Append typeId head typeId'
   , ParseTypeId config a_head a_tail backtrack a_replace id typeId'
 
-  , If headIsAlpha "" head' b_head
-  , If headIsAlpha "" tail' b_tail
+  , If headIsValidChar "" head' b_head
+  , If headIsValidChar "" tail' b_tail
   , ParseNamed config b_head b_tail b_replace
 
-  , If headIsAlpha a_replace b_replace replace
+  , If headIsValidChar a_replace b_replace replace
   ) =>
   ParseTypeId config head tail backtrack replace id typeId
 
 --------------------------------------------------------------------------------
---- IsAlpha
+--- IsValidChar
 --------------------------------------------------------------------------------
 
 class
-  IsAlpha
+  IsValidChar
     (sym :: Symbol)
     (bool :: Boolean)
   | sym -> bool
 
-instance IsAlpha "a" True
-else instance IsAlpha "b" True
-else instance IsAlpha "c" True
-else instance IsAlpha "d" True
-else instance IsAlpha "e" True
-else instance IsAlpha "f" True
-else instance IsAlpha "g" True
-else instance IsAlpha "h" True
-else instance IsAlpha "i" True
-else instance IsAlpha "j" True
-else instance IsAlpha "k" True
-else instance IsAlpha "l" True
-else instance IsAlpha "m" True
-else instance IsAlpha "n" True
-else instance IsAlpha "o" True
-else instance IsAlpha "p" True
-else instance IsAlpha "q" True
-else instance IsAlpha "r" True
-else instance IsAlpha "s" True
-else instance IsAlpha "t" True
-else instance IsAlpha "u" True
-else instance IsAlpha "v" True
-else instance IsAlpha "w" True
-else instance IsAlpha "x" True
-else instance IsAlpha "y" True
-else instance IsAlpha "z" True
-else instance IsAlpha other False
+instance IsValidChar "a" True
+else instance IsValidChar "b" True
+else instance IsValidChar "c" True
+else instance IsValidChar "d" True
+else instance IsValidChar "e" True
+else instance IsValidChar "f" True
+else instance IsValidChar "g" True
+else instance IsValidChar "h" True
+else instance IsValidChar "i" True
+else instance IsValidChar "j" True
+else instance IsValidChar "k" True
+else instance IsValidChar "l" True
+else instance IsValidChar "m" True
+else instance IsValidChar "n" True
+else instance IsValidChar "o" True
+else instance IsValidChar "p" True
+else instance IsValidChar "q" True
+else instance IsValidChar "r" True
+else instance IsValidChar "s" True
+else instance IsValidChar "t" True
+else instance IsValidChar "u" True
+else instance IsValidChar "v" True
+else instance IsValidChar "w" True
+else instance IsValidChar "x" True
+else instance IsValidChar "y" True
+else instance IsValidChar "z" True
+else instance IsValidChar "A" True
+else instance IsValidChar "B" True
+else instance IsValidChar "C" True
+else instance IsValidChar "D" True
+else instance IsValidChar "E" True
+else instance IsValidChar "F" True
+else instance IsValidChar "G" True
+else instance IsValidChar "H" True
+else instance IsValidChar "I" True
+else instance IsValidChar "J" True
+else instance IsValidChar "K" True
+else instance IsValidChar "L" True
+else instance IsValidChar "M" True
+else instance IsValidChar "N" True
+else instance IsValidChar "O" True
+else instance IsValidChar "P" True
+else instance IsValidChar "Q" True
+else instance IsValidChar "R" True
+else instance IsValidChar "S" True
+else instance IsValidChar "T" True
+else instance IsValidChar "U" True
+else instance IsValidChar "V" True
+else instance IsValidChar "W" True
+else instance IsValidChar "X" True
+else instance IsValidChar "Y" True
+else instance IsValidChar "Z" True
+else instance IsValidChar "1" True
+else instance IsValidChar "2" True
+else instance IsValidChar "3" True
+else instance IsValidChar "4" True
+else instance IsValidChar "5" True
+else instance IsValidChar "6" True
+else instance IsValidChar "7" True
+else instance IsValidChar "8" True
+else instance IsValidChar "9" True
+else instance IsValidChar "0" True
+else instance IsValidChar "'" True
+else instance IsValidChar "_" True
+else instance IsValidChar other False
