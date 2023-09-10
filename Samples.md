@@ -29,6 +29,13 @@ greeting1 =
     }
 ```
 
+By default you can only use a limited set of types in the replacements:
+  - `String`
+  - `Int`
+  - `Number`
+  - Char
+
+
 ## Sample with simple config
 
 In this sample we're overriding the default config to use "<" and ">" as
@@ -45,7 +52,7 @@ greeting2 =
   fmtWith
     @MySimpleCfg
     @"""
-      Hello, my name is <name>. I live in <city>. I am <age@int> years old.
+      Hello, my name is <name>. I live in <city>. I am <age> years old.
     """
     { name: "Tom"
     , city: "London"
@@ -57,6 +64,7 @@ greeting2 =
 
 In this sample we're extending the simple config to use a custom typeclass
 for converting values to strings.
+
 
 
 ```hs
@@ -101,8 +109,7 @@ greeting3 =
 
 ## Optionally annotate replacements with type info
 
-In this sample we're extending the simple config to use a custom typeclass
-for converting values to strings.
+Finally you can optionally annotate replacements with type info.
 
 
 ```hs
@@ -114,6 +121,6 @@ greeting4 =
       I am {age@int} years old.
     """
     { name: "Tom"
-    , age: 42 
+    , age: 42
     }
 ```
