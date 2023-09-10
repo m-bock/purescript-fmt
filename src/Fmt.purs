@@ -5,7 +5,6 @@ module Fmt
   , MkConfig
   , SetOpenClose
   , SetToString
-  , class EvalConfigSpec
   , class Format
   , class IsAlpha
   , class ParseId
@@ -14,11 +13,9 @@ module Fmt
   , class ReplaceMapRL
   , class ToString
   , class ToStringBy
-  , class ValidateConfig
-  , class ValidateConfigClose
-  , class ValidateConfigClose'
-  , class ValidateConfigOpen
-  , class ValidateConfigOpen'
+  , class SymbolIsChar
+  , class SymbolIsChar'
+  , class EvalConfigSpec
   , fmt
   , fmtWith
   , format
@@ -42,12 +39,12 @@ import Prim.Row as Row
 import Prim.RowList (class RowToList, RowList)
 import Prim.RowList as RL
 import Prim.Symbol as Sym
-import Prim.TypeError (class Fail, Text)
+import Prim.TypeError (class Fail, Beside, QuoteLabel, Text)
 import Record as Record
 import Type.Data.Boolean (class If)
 import Type.Equality (class TypeEquals)
-import Type.Proxy (Proxy(..))
 import Type.Function (type (#)) as Export
+import Type.Proxy (Proxy(..))
 
 --------------------------------------------------------------------------------
 --- fmt
@@ -71,27 +68,22 @@ fmtWith = format (Proxy :: _ config) (Proxy :: _ sym)
 --- Config
 --------------------------------------------------------------------------------
 
-foreign import data Config :: Type
-foreign import data MkConfig
-  :: Symbol
-  -> Symbol
-  -> Type
-  -> Config
-
-type DefaultConfig = MkConfig "{" "}" DefaultUseToString
-
---------------------------------------------------------------------------------
--- EvalConfigSpec
---------------------------------------------------------------------------------
-
 foreign import data SetOpenClose :: Symbol -> Symbol -> Config -> Config
 
 foreign import data SetToString :: Type -> Config -> Config
+
+foreign import data Config :: Type
+
+foreign import data MkConfig :: Symbol -> Symbol -> Type -> Config
+
+type DefaultConfig = MkConfig "{" "}" DefaultUseToString
 
 class EvalConfigSpec (spec :: Config) (config :: Config) | spec -> config
 
 instance
   ( EvalConfigSpec tail (MkConfig openX closeX useToString)
+  , SymbolIsChar open
+  , SymbolIsChar close
   ) =>
   EvalConfigSpec (SetOpenClose open close tail) (MkConfig open close useToString)
 
@@ -103,62 +95,28 @@ instance
 instance EvalConfigSpec (MkConfig open close useToString) (MkConfig open close useToString)
 
 --------------------------------------------------------------------------------
---- ValidateConfig
+--- SymbolIsChar
 --------------------------------------------------------------------------------
 
-class ValidateConfig (config :: Config)
+class SymbolIsChar (sym :: Symbol)
 
-instance
-  ( ValidateConfigOpen open
-  , ValidateConfigClose close
-  ) =>
-  ValidateConfig (MkConfig open close useToString)
-
---------------------------------------------------------------------------------
---- ValidateConfigOpen
---------------------------------------------------------------------------------
-
-class ValidateConfigOpen (sym :: Symbol)
-
-instance (Fail (Text "Open cannot be empty")) => ValidateConfigOpen ""
+instance (Fail (Text "Cannot be empty")) => SymbolIsChar ""
 
 else instance
   ( Sym.Cons head tail sym
-  , ValidateConfigOpen' head tail
+  , SymbolIsChar' head tail
   ) =>
-  ValidateConfigOpen sym
+  SymbolIsChar sym
 
-class ValidateConfigOpen' (head :: Symbol) (tail :: Symbol)
+class SymbolIsChar' (head :: Symbol) (tail :: Symbol)
 
-instance ValidateConfigOpen' head ""
+instance SymbolIsChar' head ""
 
 else instance
-  ( Fail (Text "Open must be single character")
+  ( Fail (Beside (QuoteLabel sym) (Text " must be single character"))
+  , Sym.Append head tail sym
   ) =>
-  ValidateConfigOpen' head tail
-
---------------------------------------------------------------------------------
---- ValidateConfigClose
---------------------------------------------------------------------------------
-
-class ValidateConfigClose (sym :: Symbol)
-
-instance (Fail (Text "Close cannot be empty")) => ValidateConfigClose ""
-
-else instance
-  ( Sym.Cons head tail sym
-  , ValidateConfigClose' head tail
-  ) =>
-  ValidateConfigClose sym
-
-class ValidateConfigClose' (head :: Symbol) (tail :: Symbol)
-
-instance ValidateConfigClose' head ""
-
-else instance
-  ( Fail (Text "Close must be single character")
-  ) =>
-  ValidateConfigClose' head tail
+  SymbolIsChar' head tail
 
 --------------------------------------------------------------------------------
 --- Fmt
@@ -170,7 +128,6 @@ class Format (config :: Config) (sym :: Symbol) (replace :: Type) where
 instance
   ( TypeEquals config (MkConfig open close useToString)
   , ParseNamed config had tail row
-  , ValidateConfig config
   , Sym.Cons had tail sym
   , IsSymbol sym
   , ReplaceMap config row
