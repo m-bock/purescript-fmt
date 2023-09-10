@@ -1,3 +1,4 @@
+{-
 # purescript-fmt
 
 Format strings, safely.
@@ -5,9 +6,8 @@ Format strings, safely.
 ![Latest release](logo.svg)
 
 ## Sample
+-}
 
-
-```hs
 module Demo where
 
 import Fmt (fmt)
@@ -24,6 +24,7 @@ greeting =
     , city: "London"
     , age: 42
     }
-```
 
+{-
 You can [check out more examples here](./Samples.md).
+-}
