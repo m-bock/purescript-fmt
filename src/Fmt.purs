@@ -15,7 +15,6 @@ import Prim.RowList as RL
 import Prim.Symbol as Sym
 import Record as Record
 import Type.Data.Boolean (class If)
-import Type.Data.List (type (:>), List', Nil')
 import Type.Equality (class TypeEquals)
 import Type.Proxy (Proxy(..))
 
@@ -51,20 +50,6 @@ fmt
 fmt = format (Proxy :: _ DefaultConfig) (Proxy :: _ sym)
 
 --------------------------------------------------------------------------------
---- SymToList
---------------------------------------------------------------------------------
-
-class SymToList (sym :: Symbol) (xs :: List' Symbol) | sym -> xs
-
-instance SymToList "" Nil'
-
-else instance
-  ( Sym.Cons head tail sym
-  , SymToList tail xs
-  ) =>
-  SymToList sym (head :> xs)
-
---------------------------------------------------------------------------------
 --- Config
 --------------------------------------------------------------------------------
 
@@ -93,11 +78,16 @@ class Format (config :: Config) (sym :: Symbol) (replace :: Type) where
   format :: Proxy config -> Proxy sym -> replace -> String
 
 instance
-  ( SymToList sym tokens
-  , ParseNamed config tokens row
+  ( TypeEquals config
+      ( MkConfig
+          (MkConfigOpen open)
+          (MkConfigClose close)
+          configToString
+      )
+  , ParseNamed config had tail row
+  , Sym.Cons had tail sym
   , IsSymbol sym
   , ReplaceMap config row
-  , TypeEquals config (MkConfig (MkConfigOpen open) (MkConfigClose close) configToString)
   , IsSymbol open
   , IsSymbol close
   ) =>
@@ -181,11 +171,16 @@ instance ReplaceMapRL config RL.Nil row where
   replaceMapRL _ _ _ = []
 
 instance
-  ( ReplaceMapRL config tail row
+  ( TypeEquals config
+      ( MkConfig
+          configOpen
+          configClose
+          (MkConfigToString configToString)
+      )
+  , ReplaceMapRL config tail row
   , ToStringBy configToString value
   , IsSymbol key
   , Row.Cons key value row' row
-  , TypeEquals config (MkConfig configOpen configClose (MkConfigToString configToString))
   ) =>
   ReplaceMapRL config (RL.Cons key value tail) row
   where
@@ -212,50 +207,57 @@ instance
 class
   ParseNamed
     (config :: Config)
-    (tokens :: List' Symbol)
+    (head :: Symbol)
+    (tail :: Symbol)
     (replace :: Row Type)
-  | tokens -> replace
+  | config head tail -> replace
 
-instance ParseNamed config Nil' ()
+instance ParseNamed config head "" ()
 
 else instance
-  ( TypeEquals config (MkConfig (MkConfigOpen open) (MkConfigClose close) configToString)
-  , SymToList open openTokens
-  , ParseOpen config openTokens tokens replace
+  ( TypeEquals config
+      ( MkConfig
+          (MkConfigOpen open)
+          (MkConfigClose close)
+          configToString
+      )
+  , Sym.Cons openHead openTail open
+  , ParseOpen config openHead openTail head tail replace
   ) =>
-  ParseNamed config tokens replace
+  ParseNamed config head tail replace
 
 --------------------------------------------------------------------------------
 --- ParseSym
 --------------------------------------------------------------------------------
 
-class ParseOpen (config :: Config) (open :: List' Symbol) (tokens :: List' Symbol) (replace :: Row Type)
+class
+  ParseOpen
+    (config :: Config)
+    (openHead :: Symbol)
+    (openTail :: Symbol)
+    (head :: Symbol)
+    (tail :: Symbol)
+    (replace :: Row Type)
+  | config openHead openTail head tail -> replace
 
 instance
-  ( ParseId config tokens tokens replace ""
+  ( ParseId config head tail sym replace ""
+  ,  Sym.Cons head tail sym
   ) =>
-  ParseOpen config Nil' tokens replace
+  ParseOpen config openHead "" head tail replace
 
-instance
-  ( ParseOpen config tailSym tailTokens replace
-  ) =>
-  ParseOpen config (head :> tailSym) (head :> tailTokens) replace
-
+-- TODO
 else instance
-  ( ParseNamed config tailTokens replace
+  (
+    -- ( Sym.Cons head tailSym sym
+    -- , Sym.Cons head tailTokens tokens
+
+    -- , ParseOpen config tailSym tailTokens replace
+  
+  ParseNamed config head' tail' replace
+  , Sym.Cons head' tail' tail
   ) =>
-  ParseOpen config (head1 :> tailSym) (head2 :> tailTokens) replace
-
----
-
-testParseSym :: forall sym tokensIn tokensOut. Proxy sym -> Proxy tokensIn -> Proxy tokensOut -> Unit
-testParseSym _ _ _ = unit
-
-t1 :: Unit
-t1 = testParseSym
-  (Proxy :: _ ("a" :> "b" :> Nil'))
-  (Proxy :: _ ("a" :> "b" :> "c" :> Nil'))
-  (Proxy :: _ ("c" :> Nil'))
+  ParseOpen config openHead openTail "{" tail replace
 
 --------------------------------------------------------------------------------
 --- ParseId
@@ -264,34 +266,41 @@ t1 = testParseSym
 class
   ParseId
     (config :: Config)
-    (tokens :: List' Symbol)
-    (backtrack :: List' Symbol)
+    (head :: Symbol)
+    (tail :: Symbol)
+    (backtrack :: Symbol)
     (replace :: Row Type)
     (id :: Symbol)
+  | config head tail backtrack -> replace id
 
-instance ParseId config Nil' tokens replace id
-
-instance
-  ( ParseNamed config tokens replace
-  , Row.Cons id typ replace replace'
-  , Row.Nub replace' replace''
-  , TypeEquals config (MkConfig (MkConfigOpen open) (MkConfigClose close) configToString)
-  ) =>
-  ParseId (MkConfig (MkConfigOpen open) (MkConfigClose close) configToString) (close :> tokens) backtrack replace'' id
+instance ParseId config head "" backtrack replace id
 
 else instance
-  ( IsAlpha head bool
-  , If bool tokens Nil' a_xs
+  ( ParseNamed config head' tail' replace
+   , Sym.Cons head' tail' tail
+  , Row.Cons id typ replace replace'
+  , Row.Nub replace' replace''
+  --, TypeEquals config (MkConfig (MkConfigOpen open) (MkConfigClose close) configToString)
+  ) =>
+  ParseId {-(MkConfig (MkConfigOpen open) (MkConfigClose close) configToString)-} config "}" tail backtrack replace'' id
+
+else instance
+  ( Sym.Cons head' tail' tail
+    
+  , IsAlpha head headIsAlpha
+  , If headIsAlpha head' "" a_head
+  , If headIsAlpha tail' "" a_tail
 
   , Sym.Append id head id'
-  , ParseId config a_xs backtrack a_replace id'
+  , ParseId config a_head a_tail backtrack a_replace id'
 
-  , If bool Nil' tokens b_xs
-  , ParseNamed config b_xs b_replace
+  , If headIsAlpha "" head' b_head
+  , If headIsAlpha "" tail' b_tail
+  , ParseNamed config b_head b_tail b_replace
 
-  , If bool a_replace b_replace replace
+  , If headIsAlpha a_replace b_replace replace
   ) =>
-  ParseId config (head :> tokens) backtrack replace id
+  ParseId config head tail backtrack replace id
 
 --------------------------------------------------------------------------------
 --- IsAlpha
