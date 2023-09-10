@@ -1,4 +1,34 @@
-module Fmt where
+module Fmt
+  ( Config
+  , ConfigOpen
+  , MkConfig
+  , ConfigClose
+  , ConfigToString
+  , MkOpen
+  , MkClose
+  , MkToString
+  , DefaultToString
+  , class Format
+  , format
+  , class IsAlpha
+  , class ParseId
+  , class ParseNamed
+  , class ReplaceMap
+  , replaceMap
+  , class ReplaceMapRL
+  , replaceMapRL
+  , class ToString
+  , toString
+  , class ToStringBy
+  , toStringBy
+  , class ValidateConfig
+  , class ValidateConfigClose
+  , class ValidateConfigClose'
+  , class ValidateConfigOpen
+  , class ValidateConfigOpen'
+  , fmt
+  , fmtWith
+  ) where
 
 import Prelude
 
@@ -13,29 +43,11 @@ import Prim.Row as Row
 import Prim.RowList (class RowToList, RowList)
 import Prim.RowList as RL
 import Prim.Symbol as Sym
+import Prim.TypeError (class Fail, Text)
 import Record as Record
 import Type.Data.Boolean (class If)
 import Type.Equality (class TypeEquals)
 import Type.Proxy (Proxy(..))
-
---------------------------------------------------------------------------------
-
-greeting :: String
-greeting =
-  fmt
-    @"""
-      Hello, my name is {name}. I live in {city}.
-      Hello, my name is {name}. I live in {city}.
-      Hello, my name is {name}. I live in {city}.
-      Hello, my name is {name}. I live in {city}.
-      Hello, my name is {name}. I live in {city}.
-      Hello, my name is {name}. I live in {city}.
-      Hello, my name is {name}. I live in {city}.
-      Hello, my name is {name}. I live in {city}.
-      Hello, my name is {name}. I live in {city}.
-      Hello, my name is {name}. I live in {city}.
-    """
-    { name: "Tom", city: "London" }
 
 --------------------------------------------------------------------------------
 --- fmt
@@ -48,26 +60,96 @@ fmt
   -> String
 fmt = format (Proxy :: _ DefaultConfig) (Proxy :: _ sym)
 
+fmtWith
+  :: forall @config @sym replace
+   . Format config sym replace
+  => replace
+  -> String
+fmtWith = format (Proxy :: _ config) (Proxy :: _ sym)
+
 --------------------------------------------------------------------------------
 --- Config
 --------------------------------------------------------------------------------
 
 foreign import data ConfigOpen :: Type
-foreign import data MkConfigOpen :: Symbol -> ConfigOpen
+foreign import data MkOpen :: Symbol -> ConfigOpen
 
-foreign import data MkConfigClose :: Symbol -> ConfigClose
+foreign import data MkClose :: Symbol -> ConfigClose
 foreign import data ConfigClose :: Type
 
 foreign import data ConfigToString :: Type
-foreign import data MkConfigToString :: Type -> ConfigToString
+foreign import data MkToString :: Type -> ConfigToString
 
 foreign import data Config :: Type
 foreign import data MkConfig :: ConfigOpen -> ConfigClose -> ConfigToString -> Config
 
 type DefaultConfig = MkConfig
-  (MkConfigOpen "{")
-  (MkConfigClose "}")
-  (MkConfigToString DefaultToString)
+  (MkOpen "{")
+  (MkClose "}")
+  (MkToString DefaultToString)
+
+--------------------------------------------------------------------------------
+--- ValidateConfig
+--------------------------------------------------------------------------------
+
+class ValidateConfig (config :: Config)
+
+instance
+  ( ValidateConfigOpen open
+  , ValidateConfigClose close
+  ) =>
+  ValidateConfig
+    ( MkConfig
+        (MkOpen open)
+        (MkClose close)
+        configToString
+    )
+
+--------------------------------------------------------------------------------
+--- ValidateConfigOpen
+--------------------------------------------------------------------------------
+
+class ValidateConfigOpen (sym :: Symbol)
+
+instance (Fail (Text "Open cannot be empty")) => ValidateConfigOpen ""
+
+else instance
+  ( Sym.Cons head tail sym
+  , ValidateConfigOpen' head tail
+  ) =>
+  ValidateConfigOpen sym
+
+class ValidateConfigOpen' (head :: Symbol) (tail :: Symbol)
+
+instance ValidateConfigOpen' head ""
+
+else instance
+  ( Fail (Text "Open must be single character")
+  ) =>
+  ValidateConfigOpen' head tail
+
+--------------------------------------------------------------------------------
+--- ValidateConfigClose
+--------------------------------------------------------------------------------
+
+class ValidateConfigClose (sym :: Symbol)
+
+instance (Fail (Text "Close cannot be empty")) => ValidateConfigClose ""
+
+else instance
+  ( Sym.Cons head tail sym
+  , ValidateConfigClose' head tail
+  ) =>
+  ValidateConfigClose sym
+
+class ValidateConfigClose' (head :: Symbol) (tail :: Symbol)
+
+instance ValidateConfigClose' head ""
+
+else instance
+  ( Fail (Text "Close must be single character")
+  ) =>
+  ValidateConfigClose' head tail
 
 --------------------------------------------------------------------------------
 --- Fmt
@@ -79,11 +161,12 @@ class Format (config :: Config) (sym :: Symbol) (replace :: Type) where
 instance
   ( TypeEquals config
       ( MkConfig
-          (MkConfigOpen open)
-          (MkConfigClose close)
+          (MkOpen open)
+          (MkClose close)
           configToString
       )
   , ParseNamed config had tail row
+  , ValidateConfig config
   , Sym.Cons had tail sym
   , IsSymbol sym
   , ReplaceMap config row
@@ -174,7 +257,7 @@ instance
       ( MkConfig
           configOpen
           configClose
-          (MkConfigToString configToString)
+          (MkToString configToString)
       )
   , ReplaceMapRL config tail row
   , ToStringBy configToString value
@@ -216,9 +299,9 @@ instance parseNamed_nil :: ParseNamed config head "" ()
 else instance parseNamed_open ::
   ( ParseId config head' tail' tail' replace ""
   , Sym.Cons head' tail' tail
-  , TypeEquals config (MkConfig (MkConfigOpen open) configClose configToString)
+  , TypeEquals config (MkConfig (MkOpen open) configClose configToString)
   ) =>
-  ParseNamed (MkConfig (MkConfigOpen open) configClose configToString) open tail replace
+  ParseNamed (MkConfig (MkOpen open) configClose configToString) open tail replace
 
 else instance parseNamed_other ::
   ( Sym.Cons head' tail' tail
@@ -240,9 +323,9 @@ class
     (id :: Symbol)
   | config head tail backtrack -> replace id
 
-instance ParseId config head "" backtrack replace id
+instance parseId_nil :: ParseId config head "" backtrack replace id
 
-else instance
+else instance parseId_finish ::
   ( ParseNamed config head' tail' replace
   , Sym.Cons head' tail' tail
   , Row.Cons id typ replace replace'
@@ -250,13 +333,13 @@ else instance
   , TypeEquals config
       ( MkConfig
           configOpen
-          (MkConfigClose close)
+          (MkClose close)
           configToString
       )
   ) =>
-  ParseId (MkConfig configOpen (MkConfigClose close) configToString) close tail backtrack replace'' id
+  ParseId (MkConfig configOpen (MkClose close) configToString) close tail backtrack replace'' id
 
-else instance
+else instance parseId_continueOrFail ::
   ( Sym.Cons head' tail' tail
 
   , IsAlpha head headIsAlpha
