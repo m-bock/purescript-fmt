@@ -1,17 +1,8 @@
 module Fmt
   ( Config
-  , ConfigClose
-  , ConfigOpen
-  , ConfigToString
-  , DefaultClose
   , DefaultConfig
-  , DefaultOpen
-  , DefaultToString
   , DefaultUseToString
-  , MkClose
   , MkConfig
-  , MkOpen
-  , MkToString
   , SetOpenClose
   , SetToString
   , class EvalConfigSpec
@@ -36,8 +27,7 @@ module Fmt
   , toString
   , toStringBy
   , module Export
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -81,35 +71,18 @@ fmtWith = format (Proxy :: _ config) (Proxy :: _ sym)
 --- Config
 --------------------------------------------------------------------------------
 
-foreign import data ConfigOpen :: Type
-foreign import data MkOpen :: Symbol -> ConfigOpen
-
-foreign import data MkClose :: Symbol -> ConfigClose
-foreign import data ConfigClose :: Type
-
-foreign import data ConfigToString :: Type
-foreign import data MkToString :: Type -> ConfigToString
-
 foreign import data Config :: Type
 foreign import data MkConfig
-  :: ConfigOpen
-  -> ConfigClose
-  -> ConfigToString
+  :: Symbol
+  -> Symbol
+  -> Type
   -> Config
 
-type DefaultConfig = MkConfig
-  (MkOpen "{")
-  (MkClose "}")
-  (MkToString DefaultUseToString)
-
-type DefaultOpen = MkOpen "{"
-
-type DefaultClose = MkClose "}"
-
-type DefaultToString = MkToString DefaultUseToString
+type DefaultConfig = MkConfig "{" "}" DefaultUseToString
 
 --------------------------------------------------------------------------------
-
+-- EvalConfigSpec
+--------------------------------------------------------------------------------
 
 foreign import data SetOpenClose :: Symbol -> Symbol -> Config -> Config
 
@@ -118,17 +91,16 @@ foreign import data SetToString :: Type -> Config -> Config
 class EvalConfigSpec (spec :: Config) (config :: Config) | spec -> config
 
 instance
-  ( EvalConfigSpec tail (MkConfig configOpen configClose configToString)
+  ( EvalConfigSpec tail (MkConfig openX closeX useToString)
   ) =>
-  EvalConfigSpec (SetOpenClose open close tail) (MkConfig (MkOpen open) (MkClose close) configToString)
+  EvalConfigSpec (SetOpenClose open close tail) (MkConfig open close useToString)
 
 instance
-  ( EvalConfigSpec tail (MkConfig configOpen configClose configToString)
+  ( EvalConfigSpec tail (MkConfig open close toStringX)
   ) =>
-  EvalConfigSpec (SetToString toString tail) (MkConfig configOpen configClose (MkToString toString))
+  EvalConfigSpec (SetToString useToString tail) (MkConfig open close useToString)
 
-instance EvalConfigSpec (MkConfig configOpen configClose configToString) (MkConfig configOpen configClose configToString)
-
+instance EvalConfigSpec (MkConfig open close useToString) (MkConfig open close useToString)
 
 --------------------------------------------------------------------------------
 --- ValidateConfig
@@ -140,12 +112,7 @@ instance
   ( ValidateConfigOpen open
   , ValidateConfigClose close
   ) =>
-  ValidateConfig
-    ( MkConfig
-        (MkOpen open)
-        (MkClose close)
-        configToString
-    )
+  ValidateConfig (MkConfig open close useToString)
 
 --------------------------------------------------------------------------------
 --- ValidateConfigOpen
@@ -201,12 +168,7 @@ class Format (config :: Config) (sym :: Symbol) (replace :: Type) where
   format :: Proxy config -> Proxy sym -> replace -> String
 
 instance
-  ( TypeEquals config
-      ( MkConfig
-          (MkOpen open)
-          (MkClose close)
-          configToString
-      )
+  ( TypeEquals config (MkConfig open close useToString)
   , ParseNamed config had tail row
   , ValidateConfig config
   , Sym.Cons had tail sym
@@ -296,14 +258,9 @@ instance ReplaceMapRL config RL.Nil row where
   replaceMapRL _ _ _ = []
 
 instance
-  ( TypeEquals config
-      ( MkConfig
-          configOpen
-          configClose
-          (MkToString configToString)
-      )
+  ( TypeEquals config (MkConfig open close useToString)
   , ReplaceMapRL config tail row
-  , ToStringBy configToString value
+  , ToStringBy useToString value
   , IsSymbol key
   , Row.Cons key value row' row
   ) =>
@@ -318,7 +275,7 @@ instance
       value = Record.get (Proxy :: Proxy key) record
 
       valueStr :: String
-      valueStr = toStringBy (Proxy :: Proxy configToString) value
+      valueStr = toStringBy (Proxy :: Proxy useToString) value
 
       tail :: Array (String /\ String)
       tail = replaceMapRL (Proxy :: Proxy config) (Proxy :: Proxy tail) record
@@ -342,9 +299,9 @@ instance parseNamed_nil :: ParseNamed config head "" ()
 else instance parseNamed_open ::
   ( ParseId config head' tail' tail' replace ""
   , Sym.Cons head' tail' tail
-  , TypeEquals config (MkConfig (MkOpen open) configClose configToString)
+  , TypeEquals config (MkConfig open close useToString)
   ) =>
-  ParseNamed (MkConfig (MkOpen open) configClose configToString) open tail replace
+  ParseNamed (MkConfig open close useToString) open tail replace
 
 else instance parseNamed_other ::
   ( Sym.Cons head' tail' tail
@@ -373,14 +330,9 @@ else instance parseId_finish ::
   , Sym.Cons head' tail' tail
   , Row.Cons id typ replace replace'
   , Row.Nub replace' replace''
-  , TypeEquals config
-      ( MkConfig
-          configOpen
-          (MkClose close)
-          configToString
-      )
+  , TypeEquals config (MkConfig open close useToString)
   ) =>
-  ParseId (MkConfig configOpen (MkClose close) configToString) close tail backtrack replace'' id
+  ParseId (MkConfig open close useToString) close tail backtrack replace'' id
 
 else instance parseId_continueOrFail ::
   ( Sym.Cons head' tail' tail
