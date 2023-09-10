@@ -16,6 +16,7 @@ module Fmt
   , class SymbolIsChar
   , class SymbolIsChar'
   , class EvalConfigSpec
+  , class ParseTypeId
   , fmt
   , fmtWith
   , format
@@ -89,6 +90,8 @@ instance
 
 instance
   ( EvalConfigSpec tail (MkConfig open close toStringX)
+  , SymbolIsChar open
+  , SymbolIsChar close
   ) =>
   EvalConfigSpec (SetToString useToString tail) (MkConfig open close useToString)
 
@@ -161,27 +164,33 @@ replaceNamed { open, close } (key /\ value) = Str.replaceAll
 --- ToString
 --------------------------------------------------------------------------------
 
-class ToStringBy (tok :: Type) (a :: Type) where
+class
+  ToStringBy (tok :: Type) (a :: Type) (sym :: Symbol)
+  | tok a -> sym
+  where
   toStringBy :: Proxy tok -> a -> String
 
 data DefaultUseToString
 
-instance (ToString a) => ToStringBy DefaultUseToString a where
+instance (ToString a sym) => ToStringBy DefaultUseToString a sym where
   toStringBy _ = toString
 
-class ToString (a :: Type) where
+class
+  ToString (a :: Type) (sym :: Symbol)
+  | a -> sym
+  where
   toString :: a -> String
 
-instance ToString String where
+instance ToString String "string" where
   toString = identity
 
-instance ToString Int where
+instance ToString Int "int" where
   toString = show
 
-instance ToString Number where
+instance ToString Number "number" where
   toString = show
 
-instance ToString Char where
+instance ToString Char "char" where
   toString = show
 
 --------------------------------------------------------------------------------
@@ -217,7 +226,7 @@ instance ReplaceMapRL config RL.Nil row where
 instance
   ( TypeEquals config (MkConfig open close useToString)
   , ReplaceMapRL config tail row
-  , ToStringBy useToString value
+  , ToStringBy useToString value typSym
   , IsSymbol key
   , Row.Cons key value row' row
   ) =>
@@ -280,7 +289,19 @@ class
     (id :: Symbol)
   | config head tail backtrack -> replace id
 
-instance parseId_nil :: ParseId config head "" backtrack replace id
+instance parseId_finishEnd ::
+  ( ParseNamed config "" "" replace
+  , Row.Cons id typ replace replace'
+  , Row.Nub replace' replace''
+  ) =>
+  ParseId (MkConfig open close useToString) close "" backtrack replace'' id
+
+
+else instance parseId_nil ::
+  ( ParseNamed config head' tail' replace
+  , Sym.Cons head' tail' backtrack
+  ) =>
+  ParseId config head "" backtrack replace id
 
 else instance parseId_finish ::
   ( ParseNamed config head' tail' replace
@@ -290,6 +311,12 @@ else instance parseId_finish ::
   , TypeEquals config (MkConfig open close useToString)
   ) =>
   ParseId (MkConfig open close useToString) close tail backtrack replace'' id
+
+else instance parseId_startTypeId ::
+  ( ParseTypeId config head' tail' backtrack replace id ""
+  , Sym.Cons head' tail' tail
+  ) =>
+  ParseId config "@" tail backtrack replace id
 
 else instance parseId_continueOrFail ::
   ( Sym.Cons head' tail' tail
@@ -301,13 +328,58 @@ else instance parseId_continueOrFail ::
   , Sym.Append id head id'
   , ParseId config a_head a_tail backtrack a_replace id'
 
+  , Sym.Cons backtrackHead' backtrackTail' backtrack
+  , If headIsAlpha "" backtrackHead' b_head
+  , If headIsAlpha "" backtrackTail' b_tail
+  , ParseNamed config b_head b_tail b_replace
+
+  , If headIsAlpha a_replace b_replace replace
+  ) =>
+  ParseId config head tail backtrack replace id
+
+--------------------------------------------------------------------------------
+--- ParseTypeId
+--------------------------------------------------------------------------------
+
+class
+  ParseTypeId
+    (config :: Config)
+    (head :: Symbol)
+    (tail :: Symbol)
+    (backtrack :: Symbol)
+    (replace :: Row Type)
+    (id :: Symbol)
+    (typeId :: Symbol)
+
+instance parseTypeId_nil :: ParseTypeId config head "" backtrack replace id typeId
+
+else instance parseTypeId_finish ::
+  ( ParseNamed config head' tail' replace
+  , Sym.Cons head' tail' tail
+  , Row.Cons id typ replace replace'
+  , Row.Nub replace' replace''
+  , TypeEquals config (MkConfig open close useToString)
+  , ToStringBy useToString typ typeId
+  ) =>
+  ParseTypeId (MkConfig open close useToString) close tail backtrack replace'' id typeId
+
+else instance parseTypeId_continueOrFail ::
+  ( Sym.Cons head' tail' tail
+
+  , IsAlpha head headIsAlpha
+  , If headIsAlpha head' "" a_head
+  , If headIsAlpha tail' "" a_tail
+
+  , Sym.Append typeId head typeId'
+  , ParseTypeId config a_head a_tail backtrack a_replace id typeId'
+
   , If headIsAlpha "" head' b_head
   , If headIsAlpha "" tail' b_tail
   , ParseNamed config b_head b_tail b_replace
 
   , If headIsAlpha a_replace b_replace replace
   ) =>
-  ParseId config head tail backtrack replace id
+  ParseTypeId config head tail backtrack replace id typeId
 
 --------------------------------------------------------------------------------
 --- IsAlpha
