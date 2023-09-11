@@ -4,6 +4,12 @@ Format strings, safely.
 
 ![Latest release](logo.svg)
 
+## Installation
+
+```sh
+spago install fmt
+```
+
 ## Sample
 
 
