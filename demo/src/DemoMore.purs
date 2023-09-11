@@ -63,7 +63,7 @@ greeting2 =
 ## Sample with advanced Config
 
 In this sample we're extending the simple config to use a custom typeclass
-for converting value of different types to strings.
+for converting different types to strings.
 
 First we create the typeclass. See the next section for more details about
 why you need to provide symbols (like `"int"`) for each type.
@@ -121,7 +121,7 @@ greeting3 =
 {-
 ## Optionally annotate Replacements with Type Info
 
-You can als optionally annotate replacements with type info:
+You can als annotate replacements with type info:
 -}
 
 greeting4 :: String
