@@ -2,7 +2,7 @@
 
 Format strings, safely.
 
-![Latest release](logo.svg)
+![fmt](logo.svg)
 
 ## Installation
 
