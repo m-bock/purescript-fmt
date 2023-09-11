@@ -1,5 +1,7 @@
 ## Imports
 
+For the code snippets in this document we'll need the following imports:
+
 
 ```hs
 module DemoMore where
@@ -38,7 +40,7 @@ By default you can only use a limited set of types in the replacements:
 
 ## Sample with Simple Config
 
-In this sample we're overriding the default config to use "<" and ">" as
+In this sample we're overriding the default config to use `<` and `>` as
 open/close symbols.
 
 
@@ -83,7 +85,7 @@ instance MyToString (Array String) "array_string" where
   myToString = Str.joinWith ", "
 ```
 
-Then we create "dummy type" that we'll use to tell `fmt` to use our typeclass:
+Then we create a "dummy type" that we'll use to tell `fmt` to use our typeclass:
 
 
 ```hs
@@ -120,7 +122,7 @@ greeting3 =
     }
 ```
 
-## Optionally annotate replacements with type info
+## Optionally annotate Replacements with Type Info
 
 You can als optionally annotate replacements with type info:
 
