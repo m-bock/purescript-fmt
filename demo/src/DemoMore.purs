@@ -37,7 +37,7 @@ By default you can only use a limited set of types in the replacements:
   - `Char`
 
 
-## Sample with Simple Config
+## Sample with simple Config
 
 In this sample we're overriding the default config to use `<` and `>` as
 open/close symbols.
