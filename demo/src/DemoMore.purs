@@ -11,7 +11,7 @@ import Fmt (fmt, fmtWith, type (#))
 import Fmt as Fmt
 
 {-
-## Sample without config
+## Zero Config Sample
 -}
 
 greeting1 :: String
@@ -35,7 +35,7 @@ By default you can only use a limited set of types in the replacements:
   - `Char`
 
 
-## Sample with simple config
+## Sample with Simple Config
 
 In this sample we're overriding the default config to use "<" and ">" as
 open/close symbols.
@@ -58,12 +58,12 @@ greeting2 =
     }
 
 {-
-## Sample with advanced config
+## Sample with advanced Config
 
 In this sample we're extending the simple config to use a custom typeclass
 for converting value of different types to strings.
 
-First we create the typeclass, see the next section for more details about
+First we create the typeclass. See the next section for more details about
 why you need to provide symbols (like `"int"`) for each type.
 -}
 
@@ -119,7 +119,7 @@ greeting3 =
 {-
 ## Optionally annotate replacements with type info
 
-Finally you can optionally annotate replacements with type info.
+You can als optionally annotate replacements with type info:
 -}
 
 greeting4 :: String
