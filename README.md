@@ -6,7 +6,7 @@ Format strings, safely.
 
 ## Installation
 
-```sh
+```
 spago install fmt
 ```
 
