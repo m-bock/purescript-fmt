@@ -100,7 +100,8 @@ else instance parseIdEnd ::
   ( Sym.Cons head' tail' tail
   , Parse head' tail' (Record replace)
   , IsSymbol id
-  , Row.Cons id String replace' replace
+  , Row.Cons id a replace' replace
+  , ToString a
   ) =>
   ParseId "}" tail id (Record replace)
   where
@@ -109,7 +110,7 @@ else instance parseIdEnd ::
       (Proxy :: Proxy head')
       (Proxy :: Proxy tail')
       repl
-      (str <> Record.get (Proxy :: Proxy id) repl)
+      (str <> (toString $ Record.get (Proxy :: Proxy id) repl))
 
 else instance parseIdCons ::
   ( Sym.Cons head' tail' tail
@@ -126,11 +127,21 @@ else instance parseIdCons ::
       repl
       str
 
-------------------------------------------------------------
+--------------------------------------------------------------------------------
+--- ToString
+--------------------------------------------------------------------------------
 
-greeting8 :: String -> String -> String
-greeting8 xy ab = fmt @"jkhjkhaa{xy}bb{ab}u" { xy, ab: "l" }
+class ToString (a :: Type) where
+  toString :: a -> String
 
-greeting9 :: String -> String -> String
-greeting9 xy ab = fmt @"jkhaa{xy}bb{ab}u" { xy, ab: "l" }
+instance toStringString :: ToString String where
+  toString = identity
 
+instance toStringInt :: ToString Int where
+  toString = show
+
+instance toStringNumber :: ToString Number where
+  toString = show
+
+instance toStringChar :: ToString Char where
+  toString = show
