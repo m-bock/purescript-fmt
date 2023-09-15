@@ -9,8 +9,8 @@ module DemoMore where
 import Prelude
 
 import Data.String as Str
-import Fmt (fmt, fmtWith, type (#))
-import Fmt as Fmt
+import FmtNext (fmt, fmtWith, type (#))
+import FmtNext as Fmt
 
 {-
 ## Zero Config Sample
