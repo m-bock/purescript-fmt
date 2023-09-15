@@ -2,18 +2,19 @@ package:
   dependencies:
     - console
     - effect
-    - foreign-object
     - prelude
     - record
     - strings
-    - typelevel-lists
     - typelevel-prelude
-  name: fmt
+    - fmt
+  name: fmt-demo
   test:
     dependencies: []
     main: Test.Main
 workspace:
-  extra_packages: {}
+  extra_packages:
+    fmt:
+      path: ../
   package_set:
     registry: 40.6.0
   pedantic_packages: true
