@@ -16,7 +16,7 @@ spago install fmt
 
 module Demo where
 
-import FmtNext (fmt)
+import Fmt (fmt)
 
 greeting :: String
 greeting =
