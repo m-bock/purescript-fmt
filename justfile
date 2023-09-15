@@ -4,6 +4,6 @@ gen:
     purs-to-md --input-purs demo/src/DemoPerf.purs --output-md Performance.md
 
 build-es:
-    spago build -p fmt-demo --backend-args '-g js,corefn'
+    spago build -p fmt --backend-args '-g js,corefn'
     purs-backend-es build
     prettier --write output-es/*/index.js

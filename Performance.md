@@ -3,6 +3,7 @@
 If you use [purs-backend-es](https://github.com/aristanetworks/purescript-backend-optimizer)
 you'll get optimized code for free. This is a simple example of how it works.
 
+For the code in this file, you need those imports:
 
 
 ```hs
