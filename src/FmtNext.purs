@@ -11,24 +11,52 @@
 
 -- @inline export fmt arity=1
 
-module FmtNext where
+module FmtNext 
+  (module Export
+  , fmt
+  , fmtWith
+  , class Parse
+  , class ParseId
+  , class ToString
+  , class ToStringBy
+  , parse
+  , parseId
+  , toString
+  , toStringBy
+  , EOF
+  )
+  where
 
 import Prelude
 
 import Data.Symbol (class IsSymbol, reflectSymbol)
+import Fmt.Config (class EvalConfigSpec, Config, DefaultConfig, DefaultUseToString, MkConfig)
 import Prim.Row as Row
 import Prim.Symbol as Sym
 import Record as Record
+import Type.Equality (class TypeEquals)
 import Type.Proxy (Proxy(..))
+import Type.Function (type (#)) as Export
 
 fmt
   :: forall @sym sym' head tail replace
-   . (Parse head tail replace)
-  => (Sym.Append sym EOF sym')
-  => (Sym.Cons head tail sym')
+   . Parse DefaultConfig head tail replace
+  => Sym.Append sym EOF sym'
+  => Sym.Cons head tail sym'
   => replace
   -> String
-fmt r = parse
+fmt = fmtWith @DefaultConfig @sym
+
+fmtWith
+  :: forall @config @sym config' sym' head tail replace
+   . Parse config' head tail replace
+  => Sym.Append sym EOF sym'
+  => Sym.Cons head tail sym'
+  => EvalConfigSpec config config'
+  => replace
+  -> String
+fmtWith r = parse
+  (Proxy :: Proxy config')
   (Proxy :: _ head)
   (Proxy :: _ tail)
   r
@@ -42,23 +70,27 @@ type EOF = "$"
 
 class
   Parse
+    (config :: Config)
     (head :: Symbol)
     (tail :: Symbol)
     (replace :: Type)
+    -- | config head tail -> replace
   where
-  parse :: Proxy head -> Proxy tail -> replace -> String -> String
+  parse :: Proxy config -> Proxy head -> Proxy tail -> replace -> String -> String
 
-instance parseNil :: Parse EOF "" replace where
-  parse _ _ _ x = x
+instance parseNil :: Parse config EOF "" replace where
+  parse _ _ _ _ x = x
 
 else instance parseStart ::
   ( Sym.Cons head' tail' tail
-  , ParseId head' tail' "" (Record replace)
+  , ParseId config head' tail' "" (Record replace)
+  , TypeEquals config (MkConfig open close useToString)
   ) =>
-  Parse "{" tail (Record replace)
+  Parse (MkConfig open close useToString) open tail (Record replace)
   where
-  parse _ _ repl str =
+  parse _ _ _ repl str =
     parseId
+      (Proxy :: Proxy config)
       (Proxy :: Proxy head')
       (Proxy :: Proxy tail')
       (Proxy :: Proxy "")
@@ -67,14 +99,14 @@ else instance parseStart ::
 
 else instance parseCons ::
   ( Sym.Cons head' tail' tail
-  , Parse head' tail' (Record replace)
-
+  , Parse config head' tail' (Record replace)
   , IsSymbol head
   ) =>
-  Parse head tail (Record replace)
+  Parse config head tail (Record replace)
   where
-  parse _ _ repl str =
+  parse _ _ _ repl str =
     parse
+      (Proxy :: Proxy config)
       (Proxy :: Proxy head')
       (Proxy :: Proxy tail')
       repl
@@ -86,41 +118,46 @@ else instance parseCons ::
 
 class
   ParseId
+    (config :: Config)
     (head :: Symbol)
     (tail :: Symbol)
     (id :: Symbol)
     (replace :: Type)
+    -- | config head tail id -> replace
   where
-  parseId :: Proxy head -> Proxy tail -> Proxy id -> replace -> String -> String
+  parseId :: Proxy config -> Proxy head -> Proxy tail -> Proxy id -> replace -> String -> String
 
-instance parseIdNil :: ParseId EOF "" id replace where
-  parseId _ _ _ _ x = x
+instance parseIdNil :: ParseId config EOF "" id replace where
+  parseId _ _ _ _ _ x = x
 
 else instance parseIdEnd ::
   ( Sym.Cons head' tail' tail
-  , Parse head' tail' (Record replace)
+  , Parse config head' tail' (Record replace)
   , IsSymbol id
   , Row.Cons id a replace' replace
-  , ToString a
+  , ToStringBy useToString a typSym
+  , TypeEquals config (MkConfig open close useToString)
   ) =>
-  ParseId "}" tail id (Record replace)
+  ParseId (MkConfig open close useToString) close tail id (Record replace)
   where
-  parseId _ _ _ repl str =
+  parseId _ _ _ _ repl str =
     parse
+      (Proxy :: Proxy config)
       (Proxy :: Proxy head')
       (Proxy :: Proxy tail')
       repl
-      (str <> (toString $ Record.get (Proxy :: Proxy id) repl))
+      (str <> (toStringBy (Proxy :: Proxy useToString) $ Record.get (Proxy :: Proxy id) repl))
 
 else instance parseIdCons ::
   ( Sym.Cons head' tail' tail
-  , ParseId head' tail' id' (Record replace)
+  , ParseId config head' tail' id' (Record replace)
   , Sym.Append id head id'
   ) =>
-  ParseId head tail id (Record replace)
+  ParseId config head tail id (Record replace)
   where
-  parseId _ _ _ repl str =
+  parseId _ _ _ _ repl str =
     parseId
+      (Proxy :: Proxy config)
       (Proxy :: Proxy head')
       (Proxy :: Proxy tail')
       (Proxy :: Proxy id')
@@ -131,17 +168,29 @@ else instance parseIdCons ::
 --- ToString
 --------------------------------------------------------------------------------
 
-class ToString (a :: Type) where
+class
+  ToStringBy (tok :: Type) (a :: Type) (sym :: Symbol)
+  | tok a -> sym
+  where
+  toStringBy :: Proxy tok -> a -> String
+
+instance (ToString a sym) => ToStringBy DefaultUseToString a sym where
+  toStringBy _ = toString
+
+class
+  ToString (a :: Type) (sym :: Symbol)
+  | a -> sym
+  where
   toString :: a -> String
 
-instance toStringString :: ToString String where
+instance ToString String "string" where
   toString = identity
 
-instance toStringInt :: ToString Int where
+instance ToString Int "int" where
   toString = show
 
-instance toStringNumber :: ToString Number where
+instance ToString Number "number" where
   toString = show
 
-instance toStringChar :: ToString Char where
+instance ToString Char "char" where
   toString = show
