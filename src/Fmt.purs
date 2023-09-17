@@ -1,12 +1,12 @@
--- @inline export parseCons(..).parse arity=3
+-- @inline export parseCons arity=3
 -- @inline export parseStart(..).parse arity=3
 -- @inline export parseNil(..).parse arity=3
 
 -- @inline export parseIdCons(..).parseId always
 -- @inline export parseIdStart(..).parseId always
--- @inline export parseIdEnd(..).parseId always
 -- @inline export parseIdNil(..).parseId always
 -- @inline export parseIdAt(..).parseId always
+-- @inline export parseIdEnd arity=6
 
 -- @inline export parseTypeIdCons(..).parseTypeId always
 -- @inline export parseTypeIdEnd(..).parseTypeId always
@@ -15,8 +15,8 @@
 -- @inline export formatCons(..).format arity=1
 -- @inline export formatNil(..).format arity=1
 
--- @inline export fmt arity=1
--- @inline export fmtWith arity=1
+-- @inline export fmt arity=3
+-- @inline export fmtWith arity=4
 
 module Fmt
   ( module Export

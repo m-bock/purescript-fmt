@@ -32,7 +32,7 @@ greeting =
     }
 ```
 
-You can [check out more examples here](./Samples.md). 
+You can [check out more examples here](./Samples.md).
 
 There's also a guide about [runtime perfomance](./Performance.md).
 
